@@ -88,7 +88,7 @@ python -m drift_lens_lab [OPTIONS]
 python -m unittest discover -s tests -v
 ```
 
-All 39 tests are deterministic and offline — no network, no downloads.
+All tests are deterministic and offline — no network, no downloads.
 
 ---
 
@@ -112,7 +112,7 @@ drift_lens_lab/
 ├── metrics.py        # rolling accuracy and log-loss
 ├── reports.py        # HTML/Markdown report generator
 └── cli.py            # argparse CLI
-tests/                # 39 unit tests
+tests/                # unit tests
 examples/             # reproducible example script
 ```
 
