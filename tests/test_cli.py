@@ -61,5 +61,39 @@ class TestRunExperimentDeterminism(unittest.TestCase):
         self.assertEqual(r1.drift_events, r2.drift_events)
 
 
+class TestRunExperimentValidation(unittest.TestCase):
+    """run_experiment must raise ValueError for nonsensical inputs."""
+
+    def _run(self, **overrides):
+        defaults = dict(
+            steps=50, drift_kind="sudden", drift_at=25,
+            drift_width=10, n_features=5, seed=0,
+            model_name="logreg", detector_name="ddm",
+            window=20, report_path=None,
+        )
+        defaults.update(overrides)
+        return run_experiment(**defaults)
+
+    def test_rejects_zero_steps(self):
+        with self.assertRaises(ValueError, msg="steps=0 should raise"):
+            self._run(steps=0)
+
+    def test_rejects_negative_steps(self):
+        with self.assertRaises(ValueError):
+            self._run(steps=-10)
+
+    def test_rejects_zero_features(self):
+        with self.assertRaises(ValueError):
+            self._run(n_features=0)
+
+    def test_rejects_zero_window(self):
+        with self.assertRaises(ValueError):
+            self._run(window=0)
+
+    def test_rejects_negative_drift_at(self):
+        with self.assertRaises(ValueError):
+            self._run(drift_at=-1)
+
+
 if __name__ == "__main__":
     unittest.main()

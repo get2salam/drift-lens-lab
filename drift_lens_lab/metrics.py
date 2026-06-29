@@ -9,17 +9,24 @@ class RollingAccuracy:
     """Sliding-window accuracy over the last `window` predictions."""
 
     def __init__(self, window: int = 100) -> None:
+        if window < 1:
+            raise ValueError(f"window must be >= 1, got {window}")
         self.window = window
         self._buf: Deque[int] = deque(maxlen=window)
+        self._correct: int = 0  # running sum; keeps .value O(1) instead of O(window)
 
     def update(self, pred: int, label: int) -> None:
-        self._buf.append(int(pred == label))
+        correct = int(pred == label)
+        if len(self._buf) == self.window:
+            self._correct -= self._buf[0]  # subtract element about to be evicted
+        self._buf.append(correct)
+        self._correct += correct
 
     @property
     def value(self) -> Optional[float]:
         if not self._buf:
             return None
-        return sum(self._buf) / len(self._buf)
+        return self._correct / len(self._buf)
 
     @property
     def count(self) -> int:
@@ -30,20 +37,26 @@ class RollingLogLoss:
     """Sliding-window log-loss."""
 
     def __init__(self, window: int = 100, eps: float = 1e-7) -> None:
+        if window < 1:
+            raise ValueError(f"window must be >= 1, got {window}")
         self.window = window
         self.eps = eps
         self._buf: Deque[float] = deque(maxlen=window)
+        self._sum: float = 0.0  # running sum; keeps .value O(1) instead of O(window)
 
     def update(self, prob: float, label: int) -> None:
         p = max(self.eps, min(1 - self.eps, prob))
         loss = -(label * math.log(p) + (1 - label) * math.log(1 - p))
+        if len(self._buf) == self.window:
+            self._sum -= self._buf[0]  # subtract element about to be evicted
         self._buf.append(loss)
+        self._sum += loss
 
     @property
     def value(self) -> Optional[float]:
         if not self._buf:
             return None
-        return sum(self._buf) / len(self._buf)
+        return self._sum / len(self._buf)
 
 
 class MetricsTracker:

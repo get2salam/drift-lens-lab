@@ -61,6 +61,15 @@ def run_experiment(
     window: int,
     report_path: Optional[str],
 ) -> ExperimentResult:
+    if steps < 1:
+        raise ValueError(f"steps must be >= 1, got {steps}")
+    if n_features < 1:
+        raise ValueError(f"n_features must be >= 1, got {n_features}")
+    if window < 1:
+        raise ValueError(f"window must be >= 1, got {window}")
+    if drift_at < 0:
+        raise ValueError(f"drift_at must be >= 0, got {drift_at}")
+
     cfg = StreamConfig(
         n_features=n_features,
         drift_kind=drift_kind,

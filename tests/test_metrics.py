@@ -60,5 +60,43 @@ class TestMetricsTracker(unittest.TestCase):
         self.assertLessEqual(t.current_accuracy, 1.0)
 
 
+class TestRollingAccuracyRunningSum(unittest.TestCase):
+    """Invariant: running _correct must equal sum(buf) for every update."""
+
+    def test_matches_recompute_through_window_slide(self):
+        r = RollingAccuracy(window=10)
+        import random
+        rng = random.Random(0)
+        for _ in range(30):
+            r.update(rng.randint(0, 1), rng.randint(0, 1))
+            self.assertEqual(r._correct, sum(r._buf))
+            self.assertAlmostEqual(r.value, sum(r._buf) / len(r._buf), places=12)
+
+    def test_zero_window_raises(self):
+        with self.assertRaises(ValueError):
+            RollingAccuracy(window=0)
+
+    def test_negative_window_raises(self):
+        with self.assertRaises(ValueError):
+            RollingAccuracy(window=-1)
+
+
+class TestRollingLogLossRunningSum(unittest.TestCase):
+    """Invariant: running _sum must equal sum(buf) for every update."""
+
+    def test_matches_recompute_through_window_slide(self):
+        r = RollingLogLoss(window=10)
+        import random
+        rng = random.Random(1)
+        for _ in range(30):
+            r.update(rng.random(), rng.randint(0, 1))
+            self.assertAlmostEqual(r._sum, sum(r._buf), places=10)
+            self.assertAlmostEqual(r.value, sum(r._buf) / len(r._buf), places=10)
+
+    def test_zero_window_raises(self):
+        with self.assertRaises(ValueError):
+            RollingLogLoss(window=0)
+
+
 if __name__ == "__main__":
     unittest.main()
