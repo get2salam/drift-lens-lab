@@ -2,7 +2,32 @@
 
 import html
 import json
+import re
 from typing import List, Optional, Tuple
+
+# Allowlist for SVG stroke/fill colors — hex, rgb(), rgba(), or CSS named colors.
+# Rejects anything with quotes, angle brackets, or other injection characters.
+_SAFE_COLOR_RE = re.compile(
+    r"^(?:#[0-9a-fA-F]{3,8}"
+    r"|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)"
+    r"|rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(?:0|1|0?\.\d+)\s*\)"
+    r"|[a-zA-Z]{2,30})$"
+)
+
+
+def _validate_color(color: str) -> str:
+    """Return *color* unchanged if it is safe; raise ValueError otherwise."""
+    if not _SAFE_COLOR_RE.match(color):
+        raise ValueError(
+            f"Unsafe SVG color value {color!r}. "
+            "Only hex (#rrggbb), rgb(), rgba(), or CSS named colors are allowed."
+        )
+    return color
+
+
+def _md_escape_cell(value: str) -> str:
+    """Escape Markdown table-cell special characters to prevent table injection."""
+    return value.replace("\\", "\\\\").replace("|", "\\|")
 
 
 # --------------------------------------------------------------------------- #
@@ -27,6 +52,7 @@ def _text_sparkline(values: List[float], width: int = 40) -> str:
 
 def _svg_line(values: List[float], w: int = 400, h: int = 60, color: str = "#4f8ef7") -> str:
     """Return an inline SVG polyline."""
+    safe_color = html.escape(_validate_color(color))
     if len(values) < 2:
         return ""
     lo, hi = min(values), max(values)
@@ -41,7 +67,7 @@ def _svg_line(values: List[float], w: int = 400, h: int = 60, color: str = "#4f8
     return (
         f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" '
         f'xmlns="http://www.w3.org/2000/svg">'
-        f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="2"/>'
+        f'<polyline points="{points}" fill="none" stroke="{safe_color}" stroke-width="2"/>'
         f"</svg>"
     )
 
@@ -91,11 +117,11 @@ def to_markdown(result: ExperimentResult) -> str:
         f"| Parameter | Value |",
         f"|-----------|-------|",
         f"| Steps | {result.steps} |",
-        f"| Drift kind | `{result.drift_kind}` |",
+        f"| Drift kind | `{_md_escape_cell(result.drift_kind)}` |",
         f"| Drift at | {result.drift_at if result.drift_at is not None else '—'} |",
         f"| Seed | {result.seed} |",
-        f"| Model | {result.model_name} |",
-        f"| Detector | {result.detector_name} |",
+        f"| Model | {_md_escape_cell(result.model_name)} |",
+        f"| Detector | {_md_escape_cell(result.detector_name)} |",
         "",
         "## Metrics",
         "",
