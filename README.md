@@ -22,6 +22,7 @@ In production ML systems, the statistical relationship between features and labe
 | `models.py` | Online **Logistic Regression** and **Perceptron** trained sample-by-sample |
 | `detectors.py` | **DDM** (Gama 2004), **Page-Hinkley**, and **EWMA** drift detectors |
 | `metrics.py` | Sliding-window rolling accuracy and log-loss |
+| `evaluation.py` | Scores detector alarms against the known drift point: detection delay, false alarms, precision |
 | `reports.py` | Self-contained **HTML** and **Markdown** reports with inline SVG charts |
 | `cli.py` | One-command experiment runner |
 
@@ -79,6 +80,32 @@ python -m drift_lens_lab [OPTIONS]
   --window N         Rolling metric window (default: 100)
   --report PATH      Write HTML or Markdown report to PATH
 ```
+
+---
+
+## Evaluating detector quality
+
+Raw drift-event lists tell you *when* a detector fired, but not whether that was
+good — early, late, or spurious. `score_detector` compares reported events
+against the known ground-truth drift point and returns detection delay, false
+alarms, and precision:
+
+```python
+from drift_lens_lab import run, score_detector
+
+result = run(steps=400, drift_kind="sudden", drift_at=200, detector="ddm", seed=42)
+score = score_detector(result.drift_events, result.drift_at, max_delay=100)
+
+print(f"Detected     : {score.detected}")
+print(f"Delay        : {score.detection_delay}")
+print(f"False alarms : {score.false_alarms}")
+print(f"Precision    : {score.precision}")
+```
+
+An event counts as the true-positive detection only if it fires at or after
+`drift_at` and within `max_delay` steps; anything earlier, or later without a
+prior detection, counts as a false alarm. This makes it straightforward to
+compare detectors head-to-head on the same stream.
 
 ---
 
